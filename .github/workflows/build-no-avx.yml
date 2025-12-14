@@ -1,0 +1,40 @@
+name: Build Windows No-AVX
+
+on:
+  workflow_dispatch:  # Ini agar kita bisa klik tombol 'Run' manual
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive # Wajib: ambil kode C++ llama.cpp juga
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # Sesuaikan dengan python di laptopmu
+
+    - name: Install Build Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install scikit-build-core cmake ninja
+
+    - name: Build Wheel (No AVX/AVX2)
+      shell: powershell
+      run: |
+        # Inilah kunci utamanya: Mematikan instruksi modern
+        $env:CMAKE_ARGS = "-DGGML_AVX=off -DGGML_AVX2=off -DGGML_FMA=off -DGGML_F16C=off"
+        $env:FORCE_CMAKE = "1"
+        
+        # Perintah build
+        pip wheel . --no-deps --wheel-dir dist --verbose
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: llama-cpp-python-no-avx-wheel
+        path: dist/*.whl
